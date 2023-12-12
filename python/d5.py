@@ -1,51 +1,85 @@
 import re
-from pprint import pprint
+import bisect
+from typing import Optional
+from functools import reduce
 from utils import read_numbers
-import tqdm.auto as tqdm
 
 maps = []
 initial_seeds = []
 
+def close_gaps(cmap: list, max_val: Optional[int] = None):
+    i = 0
+    while i < len(cmap)-1:
+        if cmap[i][0].stop != cmap[i+1][0].start:
+            new_range = range(cmap[i][0].stop, cmap[i+1][0].start)
+            cmap.insert(i+1, (new_range, new_range))
+        else:
+            i += 1
+    if max_val is not None and cmap[-1][0].stop < max_val:
+        new_range = range(cmap[-1][0].stop, max_val)
+        cmap.append((new_range, new_range))
+    return cmap
+
+def map_seed(tnum, maps, level=0):
+    if len(maps) == level: return (tnum,)
+    ind = bisect.bisect(maps[level], tnum, key=lambda x: x[0].stop)
+    source, dest = maps[level][ind]
+    if tnum in source:
+        next_tnum = dest.start + (tnum - source.start)
+        return (tnum,) + map_seed(next_tnum, maps, level+1)
+    return (tnum,) + map_seed(tnum, maps, level+1)
+
+def combine_levels(next_results):
+    new_results = list(list(x) for x in next_results[0])
+    for next_result in next_results[1:]:
+        for i, next_level in enumerate(next_result):
+            new_results[i].extend(next_level)
+    return tuple(tuple(sorted(x, key=lambda x: x.start)) for x in new_results)
+
+def map_seeds(trange, maps, level=0):
+    if len(maps) == level: return ((trange,),)
+
+    cind = bisect.bisect_left(maps[level], trange.start, key=lambda x: x[0].stop)
+    next_ranges = []
+
+    rstart = maps[level][cind][1].start + (trange.start - maps[level][cind][0].start)
+    while trange.stop > maps[level][cind][0].stop:
+        next_ranges.append(range(rstart, maps[level][cind][1].stop))
+        cind += 1
+        if cind >= len(maps[level]): # Maps outside the given ranges
+            rstart = maps[level][cind-1][0].stop
+            rstop = trange.stop
+            break
+        rstart = maps[level][cind][1].start
+    else:
+        rstop = maps[level][cind][1].stop - (maps[level][cind][0].stop - trange.stop)
+    next_ranges.append(range(rstart, rstop))
+
+    assert len(trange) == sum(len(x) for x in next_ranges)
+
+    new_results = combine_levels([map_seeds(x, maps, level+1) for x in next_ranges])
+    return (tuple(next_ranges),) + tuple(new_results)
+
 with open("../inputs/input5") as f:
     initial_seeds = read_numbers(f.readline())
-    f.readline()
-    cmap = None
+    cmap = []
     for line in f:
         if not line.strip():
             continue
         if re.match("(\w+)-to-(\w+) map:", line):
-            if cmap is not None:
-                maps.append(cmap)
+            if cmap: maps.append(cmap)
             cmap = []
             continue
         dest, source, rlen = read_numbers(line)
         cmap.append((range(source, source+rlen), range(dest, dest+rlen)))
     maps.append(cmap)
 
-def map_seed(tnum, maps, level=0):
-    if len(maps) == level: return (tnum,)
-    for source, dest in maps[level]:
-        if tnum in source:
-            next_tnum = dest.start + (tnum - source.start)
-            return (tnum,) + map_seed(next_tnum, maps, level+1)
-    return (tnum,) + map_seed(tnum, maps, level+1)
+maps = [close_gaps(sorted(m, key=lambda x:x[0].start)) for m in maps]
 
 seed_maps = [map_seed(seed, maps) for seed in initial_seeds]
 seed_maps.sort(key=lambda x: x[-1])
 print(seed_maps[0][-1])
 
-rmaps = [sorted([x[::-1] for x in m], key=lambda x: x[0].start) for m in maps[::-1]]
 planted_seeds = [range(sstart, sstart+slen) for sstart, slen in zip(*[iter(initial_seeds)]*2)]
-cloc = 0
-with tqdm.tqdm() as pbar:
-    while True:
-        cmap = map_seed(cloc, rmaps)
-        cseed = cmap[-1]
-        if any(cseed in planted for planted in planted_seeds):
-            break
-        pbar.update(1)
-        cloc += 1
-
-print(f"Loc -> Seed: {cmap}")
-print(f"Seed -> Loc: {map_seed(cseed, maps)}")
-print(cseed, cloc)
+results = sorted(combine_levels([map_seeds(x, maps) for x in planted_seeds])[len(maps)], key=lambda x: x.start)
+print(results[0].start)
