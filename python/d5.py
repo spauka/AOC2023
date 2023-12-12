@@ -4,9 +4,6 @@ from typing import Optional
 from functools import reduce
 from utils import read_numbers
 
-maps = []
-initial_seeds = []
-
 def close_gaps(cmap: list, max_val: Optional[int] = None):
     i = 0
     while i < len(cmap)-1:
@@ -20,18 +17,10 @@ def close_gaps(cmap: list, max_val: Optional[int] = None):
         cmap.append((new_range, new_range))
     return cmap
 
-def map_seed(tnum, maps, level=0):
-    if len(maps) == level: return (tnum,)
-    ind = bisect.bisect(maps[level], tnum, key=lambda x: x[0].stop)
-    source, dest = maps[level][ind]
-    if tnum in source:
-        next_tnum = dest.start + (tnum - source.start)
-        return (tnum,) + map_seed(next_tnum, maps, level+1)
-    return (tnum,) + map_seed(tnum, maps, level+1)
-
 def combine_levels(next_results):
-    new_results = list(list(x) for x in next_results[0])
-    for next_result in next_results[1:]:
+    next_results = iter(next_results)
+    new_results = tuple(list(x) for x in next(next_results))
+    for next_result in next_results:
         for i, next_level in enumerate(next_result):
             new_results[i].extend(next_level)
     return tuple(tuple(sorted(x, key=lambda x: x.start)) for x in new_results)
@@ -60,12 +49,13 @@ def map_seeds(trange, maps, level=0):
     new_results = combine_levels([map_seeds(x, maps, level+1) for x in next_ranges])
     return (tuple(next_ranges),) + tuple(new_results)
 
+maps = []
+initial_seeds = []
 with open("../inputs/input5") as f:
     initial_seeds = read_numbers(f.readline())
     cmap = []
     for line in f:
-        if not line.strip():
-            continue
+        if not line.strip(): continue
         if re.match("(\w+)-to-(\w+) map:", line):
             if cmap: maps.append(cmap)
             cmap = []
@@ -73,13 +63,12 @@ with open("../inputs/input5") as f:
         dest, source, rlen = read_numbers(line)
         cmap.append((range(source, source+rlen), range(dest, dest+rlen)))
     maps.append(cmap)
-
 maps = [close_gaps(sorted(m, key=lambda x:x[0].start)) for m in maps]
 
-seed_maps = [map_seed(seed, maps) for seed in initial_seeds]
-seed_maps.sort(key=lambda x: x[-1])
-print(seed_maps[0][-1])
+seed_maps = combine_levels(map_seeds(range(seed, seed), maps) for seed in initial_seeds)
+seed_maps = sorted(seed_maps[len(maps)], key=lambda x: x.start)
+print(seed_maps[0].start)
 
 planted_seeds = [range(sstart, sstart+slen) for sstart, slen in zip(*[iter(initial_seeds)]*2)]
-results = sorted(combine_levels([map_seeds(x, maps) for x in planted_seeds])[len(maps)], key=lambda x: x.start)
+results = sorted(combine_levels(map_seeds(x, maps) for x in planted_seeds)[len(maps)], key=lambda x: x.start)
 print(results[0].start)
