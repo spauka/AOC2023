@@ -1,8 +1,5 @@
 import tqdm.auto as tqdm
-from itertools import chain, repeat
 
-imap = {".": 0, "#": 1, "?": 2}
-rmap = {0: ".", 1: "#", 2: "?"}
 springs = []
 with open("../inputs/input12") as f:
     for line in f:
@@ -16,30 +13,31 @@ def count(layout: str, target: str, prev: str = ".", level=0, debug=False):
         return cache[(layout, target, prev)]
 
     if sum(c in ("?", "#") for c in layout) < sum(c == "#" for c in target):
+        # Too few broken springs
         return 0
-    if sum(c == "#" for c in layout) > sum(c == "#" for c in target):
+    elif sum(c == "#" for c in layout) > sum(c == "#" for c in target):
+        # Too many broken springs
         return 0
-    if len(target) == 0:
+    elif len(target) == 0:
+        # No more matching to do!
         return 1
 
-    if layout[0] == target[0]:
+    if layout[0] == target[0]: # If layout, target are same, consume next tokens
         return count(layout[1:], target[1:], layout[0], level+1)
-    elif (prev, layout[0], target[0]) == (".", ".", "#"):
+    elif (prev, layout[0], target[0]) == (".", ".", "#"): # If we've seen a ., consume as many as we need from layout
         return count(layout[1:], target, layout[0], level+1)
-    elif (prev, layout[0], target[0]) == ("#", ".", "#"):
+    elif (prev, layout[0], target[0]) == ("#", ".", "#"): # If we see a ., but are in the middle of a run in target, fail
         return 0
-    elif (layout[0], target[0]) == ("#", "."):
+    elif (layout[0], target[0]) == ("#", "."): # Fail if current run of # is too long
         return 0
-    elif (layout[0], target[0]) == ("#", "#"):
-        return count(layout[1:], target[1:], layout[0], level+1)
-    elif layout[0] == "?":
+    elif layout[0] == "?": # Count alternatives
         p1 = count("." + layout[1:], target, prev, level+1)
         p2 = count("#" + layout[1:], target, prev, level+1)
         if debug:
             print(" "*level, level, p1, p2)
         cache[(layout, target, prev)] = p1 + p2
         return p1 + p2
-    raise RuntimeError(f"Unexpected config: ({layout}, {target})")
+    raise RuntimeError(f"Unexpected config: ({layout}, {target})") # Shouldn't get here :O
 
 counts_p1 = []
 for config in tqdm.tqdm(springs):
@@ -48,9 +46,7 @@ print(sum(counts_p1))
 
 counts_p2 = []
 for layout, target in tqdm.tqdm(springs):
-    layout = "?".join([layout]*5)
-    target = ".".join([target]*5)
-    counts_p2.append(count(layout, target))
+    counts_p2.append(count("?".join([layout]*5), ".".join([target]*5)))
 print(sum(counts_p2))
 
 with open("../inputs/output12", "w") as f, open("../inputs/input12") as i:
