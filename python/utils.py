@@ -172,6 +172,11 @@ class BoundNeighbours(Neighbours):
             if self.validate_coord(self.coord + dir):
                 yield self.get_at_offset(dir)
 
+    def __getitem__(self, direction):
+        if direction not in self.DIRS:
+            raise ValueError(f"Unable to resolve direction {direction}. Valid directions are: {', '.join(self.DIRS.keys())}")
+        return self.get_at_offset(self.DIRS[direction])
+
     @property
     def valid_dirs(self):
         return self._valid_dirs
