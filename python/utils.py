@@ -180,7 +180,7 @@ class BoundNeighbours(Neighbours):
         return self._valid_coords
 
     def validate_coord(self, coord):
-        if any(p<0 for p in coord) or any(p>=l for p, l in zip(coord, self._parent.grid.shape)):
+        if any(p<0 for p in coord) or any(p>=l for p, l in zip(coord, self._parent.shape)):
             return False
         return True
 
