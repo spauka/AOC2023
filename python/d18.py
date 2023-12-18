@@ -20,7 +20,6 @@ def find_vertices(instrs):
     return vertices
 
 def calculate_area(vertices):
-    vertices = np.asarray(vertices, dtype=np.int64)
     perimeter = np.sum(np.sqrt((vertices[:-1,1] - vertices[1:,1])**2 + (vertices[:-1,0] - vertices[1:,0])**2), dtype=np.int64)
     internal_area = np.abs(np.sum((vertices[:-1,1] + vertices[1:,1]) * (vertices[:-1,0] - vertices[1:,0])))//2
     return internal_area + perimeter//2 + 1
