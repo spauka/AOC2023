@@ -253,8 +253,21 @@ class Grid:
             self.grid[coord.real, coord.imag] = vals
         self.grid[coord] = vals
 
+    def __contains__(self, coord):
+        if any(p < 0 or p >= l for p, l in zip(coord, self.shape)):
+            return False
+        return True
+
     def __repr__(self):
         return repr(self.grid[:,::-1].T)
+
+    def print_grid(self, conv_num=False, sep=""):
+        if conv_num:
+            for y in range(self.shape[1]):
+                print(sep.join(str(b) for b in self[:,-y-1]))
+        else:
+            for y in range(self.shape[1]):
+                print(sep.join(b.decode("ascii") for b in self[:,-y-1]))
 
     @property
     def tl(self):

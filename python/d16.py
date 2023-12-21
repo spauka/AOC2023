@@ -1,5 +1,4 @@
 from utils import Grid, Neighbours, Coord
-from itertools import chain, zip_longest
 
 REFLECT = {
     ("R", b"/"): "U",
