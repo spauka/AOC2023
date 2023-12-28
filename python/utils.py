@@ -30,6 +30,9 @@ class Coord(tuple):
 
         return super(Coord, cls).__new__(cls, args)
 
+    def __neg__(self):
+        return Coord(-x for x in self)
+
     def __add__(self, o):
         if not isinstance(o, (tuple, Coord)) or len(self) != len(o):
             raise TypeError(f"Must be a tuple of size {len(self)}")
