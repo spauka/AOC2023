@@ -72,8 +72,8 @@ def construct_better_graph(weights, start, dest, min_steps=1, max_steps=3):
 
     return g, sn, en
 
-debug = False
-weights = Grid.load_dense_file("../inputs/input17", dtype=np.int16)
+debug = True
+weights = Grid.load_dense_file("../inputs/input17s", dtype=np.int16)
 start = Coord(0, weights.shape[1]-1)
 dest = Coord(weights.shape[0]-1, 0)
 
